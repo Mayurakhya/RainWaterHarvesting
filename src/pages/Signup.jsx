@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import  {registerUser}  from "../api/Register/registerApi";
 
 function Signup() {
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -10,15 +12,47 @@ function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleSubmit = (e) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setSuccess("");
 
     if (password !== confirmPassword) {
-      alert("Passwords do not match!");
+      setError("Passwords do not match!");
       return;
     }
 
-    alert("Signup Successful!");
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters!");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const userData = {
+        username,
+        email,
+        password,
+      };
+
+      await registerUser(userData);
+      setSuccess("Signup Successful! Redirecting to login...");
+
+      setTimeout(() => {
+        navigate("/");
+      }, 2000);
+    } catch (err) {
+      setError(err.message || "Signup failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -29,7 +63,36 @@ function Signup() {
           Create Account
         </h1>
 
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded mb-4">
+            {success}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
+
+          {/* Username */}
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">
+              Username
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              className="w-full border border-gray-300 rounded-lg p-2 
+                         focus:outline-none focus:ring-2 focus:ring-blue-500 
+                         text-gray-900"
+              placeholder="john_doe"
+            />
+          </div>
 
           {/* Email */}
           <div>
@@ -107,10 +170,11 @@ function Signup() {
           {/* Signup Button */}
           <button
             type="submit"
+            disabled={loading}
             className="w-full bg-blue-600 text-white py-2 rounded-lg 
-                       hover:bg-blue-700 transition-all"
+                       hover:bg-blue-700 transition-all disabled:bg-blue-400"
           >
-            Sign Up
+            {loading ? "Signing Up..." : "Sign Up"}
           </button>
         </form>
 
