@@ -3,6 +3,26 @@
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
+}
+
+/* FIX: Ensure body takes full width and remove default centering/margins */
+body {
+  margin: 0;
+  padding: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  width: 100%;
+  background-color: white; /* Forces white background instead of system dark mode */
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
 
   width: 100%;
   margin: 0;

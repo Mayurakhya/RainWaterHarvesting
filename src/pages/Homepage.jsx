@@ -1,17 +1,27 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { FaBars, FaUserCircle } from "react-icons/fa";
-
+import { FaBars, FaUserCircle, FaTint } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 function HomePage() {
+  const navigate = useNavigate();
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    navigate("/");
+  };
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 to-teal-50">
 
       {/* ---------------- NAVBAR ---------------- */}
       <nav className="w-full bg-white shadow-md py-3 px-6 flex items-center justify-between fixed top-0 left-0 z-50">
-        
+
         {/* Logo */}
         <div className="flex items-center gap-2">
-          <FaBars className="text-blue-600 text-2xl" />
+          {/* <FaBars className="text-blue-600 text-2xl" /> */}
+          <div className="bg-blue-600 p-2 rounded-lg">
+            <FaTint className="text-white text-xl" />
+          </div>
           <div>
             <h2 className="text-lg font-bold text-blue-700">RTRWH Assessment Platform</h2>
             <p className="text-xs text-gray-500 -mt-1">Water Conservation Heroes</p>
@@ -25,7 +35,7 @@ function HomePage() {
           <a href="#about" className="hover:text-blue-600">About</a>
           <a href="#chatbot" className="hover:text-blue-600">AI Chatbot</a>
 
-          <button className="px-4 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg shadow">
+          <button onClick={() => navigate("/feasibility")} className="px-4 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg shadow">
             Start Assessment
           </button>
 
@@ -38,9 +48,13 @@ function HomePage() {
           </select>
 
           {/* Profile/Login */}
-          <Link to="/login">
-            <FaUserCircle className="text-3xl text-gray-600 hover:text-blue-600 cursor-pointer" />
-          </Link>
+          <button
+            onClick={handleLogout}
+            className="focus:outline-none"
+            title="Logout"
+          >
+            <FaUserCircle className="text-3xl text-gray-600 hover:text-red-600 cursor-pointer transition-colors" />
+          </button>
         </div>
       </nav>
 
@@ -55,7 +69,7 @@ function HomePage() {
         </span>
 
         <h1 className="text-5xl font-bold mt-4 leading-tight">
-           <span className="text-blue-700"> Transforming Rooftops into</span>  <br />
+          <span className="text-blue-700"> Transforming Rooftops into</span>  <br />
           <span className="text-purple-600">Water Conservation Heroes</span>
         </h1>
 
@@ -85,7 +99,7 @@ function HomePage() {
 
         {/* Buttons */}
         <div className="flex gap-5 mt-8">
-          <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow">
+          <button onClick={() => navigate("/feasibility")} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow">
             Start Assessment
           </button>
 
@@ -106,7 +120,7 @@ function HomePage() {
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 px-12">
-          
+
           <div className="text-center bg-blue-50 p-6 rounded-xl shadow">
             <h3 className="text-xl font-semibold">Smart Assessment</h3>
             <p className="text-gray-600 mt-2">AI-powered analysis of your property’s rainwater harvesting potential</p>

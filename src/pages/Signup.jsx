@@ -1,7 +1,7 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
-import  {registerUser}  from "../api/Register/registerApi";
+import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaTint, FaArrowRight } from "react-icons/fa";
+import { registerUser } from "../api/Register/registerApi";
 
 function Signup() {
   const [username, setUsername] = useState("");
@@ -36,17 +36,13 @@ function Signup() {
     setLoading(true);
 
     try {
-      const userData = {
-        username,
-        email,
-        password,
-      };
+      const userData = { username, email, password };
 
       await registerUser(userData);
-      setSuccess("Signup Successful! Redirecting to login...");
+      setSuccess("Account Created! Redirecting...");
 
       setTimeout(() => {
-        navigate("/");
+        navigate("/login"); // Redirect to Login after signup
       }, 2000);
     } catch (err) {
       setError(err.message || "Signup failed. Please try again.");
@@ -56,134 +52,179 @@ function Signup() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen w-screen bg-gradient-to-br from-blue-100 to-teal-100">
-
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center text-blue-700 mb-6">
-          Create Account
-        </h1>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">
-            {error}
+    <div className="min-h-screen w-screen bg-gradient-to-br from-slate-50 to-blue-100 flex flex-col items-center overflow-x-hidden font-sans text-gray-800">
+      
+      {/* --- NAVBAR --- */}
+      <nav className="w-full bg-white shadow-md py-3 px-6 flex items-center justify-between fixed top-0 left-0 z-50">
+        
+        {/* Logo */}
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/home")}>
+          <div className="bg-blue-600 p-2 rounded-lg">
+            <FaTint className="text-white text-xl" />
           </div>
-        )}
-
-        {success && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded mb-4">
-            {success}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-
-          {/* Username */}
           <div>
-            <label className="block text-gray-700 font-medium mb-1">
-              Username
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              className="w-full border border-gray-300 rounded-lg p-2 
-                         focus:outline-none focus:ring-2 focus:ring-blue-500 
-                         text-gray-900"
-              placeholder="john_doe"
-            />
+            <h2 className="text-lg font-bold text-blue-700">RTRWH Platform</h2>
+            <p className="text-xs text-gray-500 -mt-1">Water Conservation Heroes</p>
           </div>
+        </div>
 
-          {/* Email */}
-          <div>
-            <label className="block text-gray-700 font-medium mb-1">
-              Email Address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full border border-gray-300 rounded-lg p-2 
-                         focus:outline-none focus:ring-2 focus:ring-blue-500 
-                         text-gray-900"
-              placeholder="you@example.com"
-            />
-          </div>
+        {/* Nav Links */}
+        <div className="hidden md:flex items-center gap-8 text-gray-700 font-medium">
+          {/* <Link to="/home" className="hover:text-blue-600 transition-colors">Home</Link>
+          <a href="#about" className="hover:text-blue-600 transition-colors">About</a>
+          
+          <select className="border border-gray-300 rounded-lg px-2 py-1 text-gray-700 bg-white focus:outline-none cursor-pointer">
+            <option>EN</option>
+            <option>HI</option>
+            <option>AS</option>
+          </select> */}
 
-          {/* Password */}
-          <div>
-            <label className="block text-gray-700 font-medium mb-1">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full border border-gray-300 rounded-lg p-2 pr-10
-                           focus:outline-none focus:ring-2 focus:ring-blue-500 
-                           text-gray-900"
-                placeholder="••••••••"
-              />
-
-              {/* Eye Toggle */}
-              <span
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 
-                           text-gray-600 cursor-pointer text-xl"
-              >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
-              </span>
-            </div>
-          </div>
-
-          {/* Confirm Password */}
-          <div>
-            <label className="block text-gray-700 font-medium mb-1">
-              Confirm Password
-            </label>
-            <div className="relative">
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="w-full border border-gray-300 rounded-lg p-2 pr-10
-                           focus:outline-none focus:ring-2 focus:ring-blue-500 
-                           text-gray-900"
-                placeholder="••••••••"
-              />
-
-              {/* Eye Toggle */}
-              <span
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 
-                           text-gray-600 cursor-pointer text-xl"
-              >
-                {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-              </span>
-            </div>
-          </div>
-
-          {/* Signup Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg 
-                       hover:bg-blue-700 transition-all disabled:bg-blue-400"
-          >
-            {loading ? "Signing Up..." : "Sign Up"}
-          </button>
-        </form>
-
-        <p className="text-center text-gray-600 mt-4">
-          Already have an account?{" "}
-          <Link to="/" className="text-blue-600 hover:underline">
-            Login here
+          {/* Link to Login since we are on Signup */}
+          <Link to="/login" className="px-5 py-2 bg-blue-100 text-blue-600 rounded-full font-bold hover:bg-blue-200 transition-colors">
+            Login
           </Link>
-        </p>
+        </div>
+      </nav>
+
+      {/* --- MAIN CONTENT --- */}
+      <div className="w-full flex-grow flex items-center justify-center pt-28 pb-12 px-4">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100">
+          
+          {/* Header Section */}
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-8 text-center text-white">
+            <h1 className="text-3xl font-bold mb-2">Create Account</h1>
+            <p className="text-blue-100 text-sm opacity-90">
+              Join us to assess and save water efficiently.
+            </p>
+          </div>
+
+          <div className="p-8">
+            
+            {/* Messages */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r-lg text-sm font-medium">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 rounded-r-lg text-sm font-medium">
+                {success}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              
+              {/* Username Input */}
+              <div className="group">
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Username</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <FaUser className="text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                  </div>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 font-medium focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    placeholder="john_doe"
+                  />
+                </div>
+              </div>
+
+              {/* Email Input */}
+              <div className="group">
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Email Address</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <FaEnvelope className="text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                  </div>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 font-medium focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    placeholder="you@example.com"
+                  />
+                </div>
+              </div>
+
+              {/* Password Input */}
+              <div className="group">
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Password</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <FaLock className="text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                  </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full pl-11 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 font-medium focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    placeholder="Min 6 chars"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors focus:outline-none"
+                  >
+                    {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password Input */}
+              <div className="group">
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Confirm Password</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <FaLock className="text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                  </div>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    className="w-full pl-11 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 font-medium focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    placeholder="Confirm password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors focus:outline-none"
+                  >
+                    {showConfirmPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className={`w-full py-4 rounded-xl text-lg font-bold text-white shadow-lg transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2
+                  ${loading 
+                    ? "bg-gray-400 cursor-not-allowed" 
+                    : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  }`}
+              >
+                {loading ? "Creating Account..." : <>Sign Up <FaArrowRight /></>}
+              </button>
+
+            </form>
+
+            <div className="mt-8 text-center">
+              <p className="text-gray-500 font-medium">
+                Already have an account?{" "}
+                <Link to="/" className="text-blue-700 font-bold hover:underline">
+                  Login here
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
