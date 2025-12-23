@@ -45,7 +45,7 @@ function Signup() {
         navigate("/"); // Redirect to Login after signup
       }, 2000);
     } catch (err) {
-      setError(err.message || "Signup failed. Please try again.");
+      setError(err.detail || "Signup failed. Please try again.");
     } finally {
       setLoading(false);
     }
