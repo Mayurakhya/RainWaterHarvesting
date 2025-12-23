@@ -42,7 +42,7 @@ function Signup() {
       setSuccess("Account Created! Redirecting...");
 
       setTimeout(() => {
-        navigate("/login"); // Redirect to Login after signup
+        navigate("/"); // Redirect to Login after signup
       }, 2000);
     } catch (err) {
       setError(err.message || "Signup failed. Please try again.");
