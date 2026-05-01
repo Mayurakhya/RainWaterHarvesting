@@ -13,14 +13,18 @@ import 'leaflet-draw/dist/leaflet.draw.css';
 
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
   iconUrl: markerIcon,
+  shadowUrl: markerShadow,
 });
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ;
+const DEFAULT_MAP_CENTER = [26.75, 94.22];
+const isValidCoordinate = (value) => Number.isFinite(Number(value));
 
 // --- HELPER: GET TOKEN (Cookies -> LocalStorage) ---
 const getAuthToken = () => {
@@ -40,15 +44,80 @@ const getAuthToken = () => {
 const RecenterAutomatically = ({ lat, lng }) => {
   const map = useMap();
   useEffect(() => {
-    map.setView([lat, lng]);
+    map.invalidateSize();
+    map.setView([lat, lng], 18, { animate: true });
   }, [lat, lng, map]);
   return null;
 };
 
+const MapClickSelector = ({ onSelect }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    const handleClick = (event) => {
+      onSelect(event.latlng.lat, event.latlng.lng, "Selected point on map");
+    };
+
+    map.on("click", handleClick);
+    return () => {
+      map.off("click", handleClick);
+    };
+  }, [map, onSelect]);
+
+  return null;
+};
+
 // --- MAP MODAL COMPONENT ---
-const MapAreaModal = ({ onClose, onConfirm, initialCenter }) => {
-  const [map, setMap] = useState(null);
-  const center = initialCenter && initialCenter.lat ? [initialCenter.lat, initialCenter.lng] : [26.75, 94.22];
+const MapAreaModal = ({ onClose, onConfirm, onLocationConfirm, initialCenter }) => {
+  const center =
+    initialCenter && isValidCoordinate(initialCenter.lat) && isValidCoordinate(initialCenter.lng)
+      ? [Number(initialCenter.lat), Number(initialCenter.lng)]
+      : DEFAULT_MAP_CENTER;
+  const [selectedLocation, setSelectedLocation] = useState({
+    lat: center[0],
+    lng: center[1],
+    label: initialCenter?.label || "Map center",
+  });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
+
+  const handleSelectLocation = (lat, lng, label = "Selected point on map") => {
+    setSelectedLocation({
+      lat: Number(lat),
+      lng: Number(lng),
+      label,
+    });
+  };
+
+  const handleSearchLocation = async (e) => {
+    e.preventDefault();
+    const query = searchQuery.trim();
+    if (!query) return;
+
+    setSearching(true);
+    setSearchError("");
+    setSearchResults([]);
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(query)}`
+      );
+      const data = await response.json();
+      if (!data.length) {
+        setSearchError("No matching locations found. Try a nearby city, landmark, or full address.");
+        return;
+      }
+      setSearchResults(data);
+      handleSelectLocation(data[0].lat, data[0].lon, data[0].display_name);
+    } catch (error) {
+      console.error("Location search error:", error);
+      setSearchError("Location search failed. Check your connection and try again.");
+    } finally {
+      setSearching(false);
+    }
+  };
 
   const _onCreated = (e) => {
     const layer = e.layer;
@@ -71,19 +140,63 @@ const MapAreaModal = ({ onClose, onConfirm, initialCenter }) => {
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-white w-full max-w-6xl h-[85vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden relative border border-gray-600">
         <div className="bg-gray-900 p-4 flex justify-between items-center text-white shadow-md z-10">
-          <div>
+          <div className="min-w-0">
             <h3 className="font-bold text-lg flex items-center gap-2">
-              <FaRulerCombined className="text-green-400" /> Accurate Area Calculator
+              <FaRulerCombined className="text-green-400" /> Map Location & Area Tool
             </h3>
-            <p className="text-xs text-gray-400">Draw points around your roof. Click the first point to close.</p>
+            <p className="text-xs text-gray-400">Search a place, click the map to choose a location, or draw around your roof.</p>
           </div>
           <button onClick={onClose} className="bg-red-600 hover:bg-red-700 p-2 rounded-lg transition-colors text-white font-bold px-4">
             Close Tool
           </button>
         </div>
+        <div className="bg-white border-b border-gray-200 p-4 z-10">
+          <form onSubmit={handleSearchLocation} className="flex flex-col md:flex-row gap-3">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="form-input flex-grow"
+              placeholder="Search village, city, landmark, or address"
+            />
+            <button type="submit" disabled={searching} className="btn-primary px-6 py-3">
+              {searching ? "Searching..." : "Search Map"}
+            </button>
+            <button
+              type="button"
+              onClick={() => onLocationConfirm(selectedLocation)}
+              className="btn-secondary px-6 py-3"
+            >
+              Use This Location
+            </button>
+          </form>
+          {searchError && <p className="text-sm text-red-600 font-semibold mt-2">{searchError}</p>}
+          {searchResults.length > 0 && (
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+              {searchResults.map((result) => (
+                <button
+                  type="button"
+                  key={result.place_id}
+                  onClick={() => handleSelectLocation(result.lat, result.lon, result.display_name)}
+                  className="shrink-0 max-w-xs text-left rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700 hover:border-emerald-500"
+                  title={result.display_name}
+                >
+                  {result.display_name}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="mt-3 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 font-semibold">
+            Selected: {selectedLocation.label}
+            <span className="block text-xs mt-1">
+              Lat {selectedLocation.lat.toFixed(6)} - Lon {selectedLocation.lng.toFixed(6)}
+            </span>
+          </div>
+        </div>
         <div className="flex-grow relative">
-          <MapContainer center={center} zoom={18} style={{ height: '100%', width: '100%' }} ref={setMap}>
-            <RecenterAutomatically lat={center[0]} lng={center[1]} />
+          <MapContainer center={[selectedLocation.lat, selectedLocation.lng]} zoom={18} style={{ height: '100%', width: '100%' }}>
+            <RecenterAutomatically lat={selectedLocation.lat} lng={selectedLocation.lng} />
+            <MapClickSelector onSelect={handleSelectLocation} />
             <FeatureGroup>
               <EditControl
                 position="topright"
@@ -113,8 +226,8 @@ const MapAreaModal = ({ onClose, onConfirm, initialCenter }) => {
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               </LayersControl.BaseLayer>
             </LayersControl>
-            <Marker position={center}>
-              <Popup>Your Detected Location</Popup>
+            <Marker position={[selectedLocation.lat, selectedLocation.lng]}>
+              <Popup>{selectedLocation.label}</Popup>
             </Marker>
           </MapContainer>
         </div>
@@ -149,6 +262,12 @@ function FeasibilityForm() {
   const [loading, setLoading] = useState(false);
   const [fetchingLocation, setFetchingLocation] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [locationStatus, setLocationStatus] = useState("");
+  const [locationError, setLocationError] = useState("");
+  const [manualCoords, setManualCoords] = useState({
+    latitude: "",
+    longitude: "",
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -158,39 +277,124 @@ function FeasibilityForm() {
     }));
   };
 
-  const handleDetectLocation = () => {
-    if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser.");
+  const fetchRainfallForCoordinates = async (lat, lon) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/rainfall/average`, {
+        params: { latitude: lat, longitude: lon }
+      });
+
+      let avgRainfall = response.data.average_annual_rainfall_mm || response.data.average_rainfall;
+      if (avgRainfall) setFormData((prev) => ({ ...prev, annual_rainfall_mm: avgRainfall }));
+      return true;
+    } catch (error) {
+      console.error("API Error:", error);
+      return false;
+    }
+  };
+
+  const handleManualCoordChange = (e) => {
+    const { name, value } = e.target;
+    setManualCoords((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const applyLocationCoordinates = async (lat, lon, label = "Custom location") => {
+    setLocationError("");
+    setLocationStatus(`${label} applied. Looking up rainfall...`);
+    setManualCoords({
+      latitude: String(lat),
+      longitude: String(lon),
+    });
+    setFormData((prev) => ({
+      ...prev,
+      location: `${label} (${Number(lat).toFixed(6)}, ${Number(lon).toFixed(6)})`,
+      latitude: Number(lat),
+      longitude: Number(lon),
+    }));
+
+    const rainfallFound = await fetchRainfallForCoordinates(lat, lon);
+    setLocationStatus(
+      rainfallFound
+        ? `${label} applied and rainfall updated.`
+        : `${label} applied, but rainfall lookup failed. You can enter rainfall manually.`
+    );
+  };
+
+  const handleApplyManualLocation = async () => {
+    const lat = Number(manualCoords.latitude);
+    const lon = Number(manualCoords.longitude);
+
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+      setLocationError("Enter a valid latitude between -90 and 90.");
+      setLocationStatus("");
       return;
     }
+
+    if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
+      setLocationError("Enter a valid longitude between -180 and 180.");
+      setLocationStatus("");
+      return;
+    }
+
+    await applyLocationCoordinates(lat, lon, "Custom location");
+  };
+
+  const handleMapLocationConfirm = async ({ lat, lng, label }) => {
+    await applyLocationCoordinates(lat, lng, label || "Map location");
+    setShowMap(false);
+  };
+
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by this browser.");
+      return;
+    }
+
+    if (!window.isSecureContext && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+      setLocationError("Current location works only on HTTPS or localhost. Please open the app through a secure URL.");
+      return;
+    }
+
+    setLocationError("");
+    setLocationStatus("Requesting permission from your browser...");
     setFetchingLocation(true);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
+        const accuracy = Math.round(position.coords.accuracy || 0);
+
         setFormData((prev) => ({
           ...prev,
-          location: `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`,
+          location: `Current location (${lat.toFixed(6)}, ${lon.toFixed(6)})`,
           latitude: lat,
           longitude: lon
         }));
-        try {
-          const response = await axios.get(`${API_BASE_URL}/rainfall/average`, {
-            params: { latitude: lat, longitude: lon }
-          });
+        setLocationStatus(`Location detected within about ${accuracy || "unknown"} meters.`);
 
-          let avgRainfall = response.data.average_annual_rainfall_mm || response.data.average_rainfall;
-          if (avgRainfall) setFormData((prev) => ({ ...prev, annual_rainfall_mm: avgRainfall }));
-        } catch (error) {
-          console.error("API Error:", error);
-        } finally {
-          setFetchingLocation(false);
+        const rainfallFound = await fetchRainfallForCoordinates(lat, lon);
+        if (!rainfallFound) {
+          setLocationStatus("Location detected, but rainfall lookup failed. You can enter rainfall manually.");
         }
+        setFetchingLocation(false);
       },
       (error) => {
         console.error("Geolocation Error:", error);
-        alert("Unable to retrieve location.");
+        const messageByCode = {
+          1: "Location permission was denied. Allow location access in the browser and try again.",
+          2: "Your device could not determine its current position. Check GPS/Wi-Fi location services and try again.",
+          3: "Location request timed out. Move near a window or try again.",
+        };
+        setLocationError(messageByCode[error.code] || "Unable to retrieve current location.");
+        setLocationStatus("");
         setFetchingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
       }
     );
   };
@@ -261,39 +465,39 @@ function FeasibilityForm() {
   };
 
   return (
-    <div className="min-h-screen w-screen bg-gradient-to-br from-slate-50 to-blue-100 flex flex-col items-center overflow-x-hidden font-sans text-gray-800">
+    <div className="app-shell">
 
-      <nav className="w-full bg-white shadow-md py-3 px-6 flex items-center justify-between fixed top-0 left-0 z-50">
+      <nav className="nav-shell">
 
         {/* Logo */}
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/home")}>
-          <div className="bg-blue-600 p-2 rounded-lg">
-            <FaTint className="text-white text-xl" />
+        <div className="brand-lockup cursor-pointer" onClick={() => navigate("/home")}>
+          <div className="brand-mark">
+            <FaTint />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-blue-700">RTRWH Platform</h2>
-            <p className="text-xs text-gray-500 -mt-1">Water Conservation Heroes</p>
+            <h2 className="brand-title">RTRWH Platform</h2>
+            <p className="brand-subtitle">Assessment cockpit</p>
           </div>
         </div>
 
         {/* Navigation */}
-        <div className="hidden md:flex items-center gap-8 text-gray-700 font-medium">
+        <div className="nav-links">
 
           <Link to="/home" className="hover:text-blue-600 transition-colors">Home</Link>
-          <a href="#about" className="hover:text-blue-600 transition-colors">About</a>
-          <a href="#chatbot" className="hover:text-blue-600 transition-colors">AI Chatbot</a>
+          <Link to="/blogs" className="hover:text-blue-600 transition-colors">Blogs</Link>
+          <a href="#about" className="hover:text-blue-600 transition-colors">Method</a>
 
           {/* ACTIVE ASSESSMENT BUTTON */}
           <button
             disabled
-            className="px-4 py-1.5 bg-blue-100 text-blue-700 font-bold border border-blue-200 rounded-lg shadow-inner cursor-default flex items-center gap-2"
+            className="btn-secondary px-4 py-2 cursor-default"
           >
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-            Assessment Active
+            Active
           </button>
 
           {/* Language Dropdown */}
-          <select className="border border-gray-300 rounded-lg px-2 py-1 text-gray-700 bg-white">
+          <select className="nav-select">
             <option>EN</option>
             <option>HI</option>
             <option>AS</option>
@@ -303,10 +507,10 @@ function FeasibilityForm() {
           {/* Profile */}
           <button
             onClick={handleLogout}
-            className="focus:outline-none"
+            className="icon-button"
             title="Logout"
           >
-            <FaUserCircle className="text-3xl text-gray-600 hover:text-red-600 cursor-pointer transition-colors" />
+            <FaUserCircle />
           </button>
         </div>
       </nav>
@@ -315,16 +519,22 @@ function FeasibilityForm() {
         <MapAreaModal
           onClose={() => setShowMap(false)}
           onConfirm={handleAreaCalculated}
-          initialCenter={formData.latitude ? { lat: formData.latitude, lng: formData.longitude } : null}
+          onLocationConfirm={handleMapLocationConfirm}
+          initialCenter={
+            isValidCoordinate(formData.latitude) && isValidCoordinate(formData.longitude)
+              ? { lat: formData.latitude, lng: formData.longitude, label: formData.location || "Current assessment location" }
+              : null
+          }
         />
       )}
 
-      <div className="w-full flex-grow flex items-center justify-center pt-32 pb-12 px-4">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden border border-gray-100">
+      <div className="page-pad">
+        <div className="glass-panel form-panel">
 
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-10 text-center text-white">
-            <h1 className="text-3xl md:text-4xl font-bold mb-3">Feasibility Check</h1>
-            <p className="text-blue-100 text-lg opacity-90">Analyze your rooftop's potential.</p>
+          <div className="form-head">
+            <span className="eyebrow bg-white/15 text-white border-white/20">Site Assessment</span>
+            <h1 className="auth-title mt-4">Feasibility Check</h1>
+            <p className="text-white/75 text-lg max-w-2xl">Map the roof, estimate rainfall yield, and prepare a priced implementation report.</p>
           </div>
 
           <div className="p-8 md:p-12">
@@ -333,11 +543,76 @@ function FeasibilityForm() {
                 type="button"
                 onClick={handleDetectLocation}
                 disabled={fetchingLocation}
-                className="group flex items-center gap-3 bg-gray-900 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-800 transition-all shadow-lg"
+                className="btn-secondary px-8 py-4 text-lg"
               >
-                <FaMapMarkerAlt className={fetchingLocation ? "animate-bounce" : "text-blue-400"} />
+                <FaMapMarkerAlt className={fetchingLocation ? "animate-bounce" : ""} />
                 {fetchingLocation ? "Locating..." : "Auto-Detect Location & Rainfall"}
               </button>
+              {(locationStatus || locationError || isValidCoordinate(formData.latitude)) && (
+                <div className={`w-full max-w-2xl rounded-2xl border px-5 py-4 text-sm font-semibold ${
+                  locationError
+                    ? "bg-red-50 border-red-200 text-red-700"
+                    : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                }`}>
+                  {locationError || locationStatus}
+                  {isValidCoordinate(formData.latitude) && isValidCoordinate(formData.longitude) && (
+                    <div className="mt-2 flex flex-wrap items-center justify-center gap-3 text-xs">
+                      <span>Lat {Number(formData.latitude).toFixed(6)}</span>
+                      <span>Lon {Number(formData.longitude).toFixed(6)}</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowMap(true)}
+                        className="btn-ghost px-4 py-2"
+                      >
+                        Open Map at Current Location
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="mb-10 rounded-[28px] border border-white/70 bg-white/55 p-5 shadow-[0_18px_42px_rgba(6,79,85,0.08)]">
+              <div className="flex flex-col md:flex-row md:items-end gap-4">
+                <div className="flex-grow">
+                  <label className="field-label">Custom Latitude</label>
+                  <input
+                    type="number"
+                    step="any"
+                    name="latitude"
+                    value={manualCoords.latitude}
+                    onChange={handleManualCoordChange}
+                    className="form-input"
+                    placeholder="Example: 26.1445"
+                  />
+                </div>
+                <div className="flex-grow">
+                  <label className="field-label">Custom Longitude</label>
+                  <input
+                    type="number"
+                    step="any"
+                    name="longitude"
+                    value={manualCoords.longitude}
+                    onChange={handleManualCoordChange}
+                    className="form-input"
+                    placeholder="Example: 91.7362"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleApplyManualLocation}
+                  className="btn-primary px-6 py-4 whitespace-nowrap"
+                >
+                  Use Custom Location
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowMap(true)}
+                  className="btn-secondary px-6 py-4 whitespace-nowrap"
+                >
+                  Choose From Map
+                </button>
+              </div>
             </div>
 
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -353,7 +628,7 @@ function FeasibilityForm() {
                     value={formData.location}
                     onChange={handleChange}
                     required
-                    className="w-full pl-11 pr-4 py-4 bg-gray-50 border rounded-xl"
+                    className="form-input pl-11"
                   />
                 </div>
               </div>
@@ -362,7 +637,7 @@ function FeasibilityForm() {
               <div className="group">
                 <label className="block text-sm font-bold text-gray-700 mb-2 flex justify-between">
                   Annual Rainfall (mm)
-                  {formData.latitude && <span className="text-green-600 text-xs font-bold">Verified</span>}
+                  {isValidCoordinate(formData.latitude) && <span className="text-green-600 text-xs font-bold">Verified</span>}
                 </label>
                 <div className="relative">
                   <FaCloudRain className="absolute left-4 top-4 text-gray-400" />
@@ -372,7 +647,7 @@ function FeasibilityForm() {
                     value={formData.annual_rainfall_mm}
                     onChange={handleChange}
                     required
-                    className="w-full pl-11 pr-4 py-4 bg-gray-50 border rounded-xl"
+                    className="form-input pl-11"
                   />
                 </div>
               </div>
@@ -389,13 +664,13 @@ function FeasibilityForm() {
                       value={formData.roof_area_m2}
                       onChange={handleChange}
                       required
-                      className="w-full pl-11 pr-4 py-4 bg-gray-50 border rounded-xl"
+                      className="form-input pl-11"
                     />
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowMap(true)}
-                    className="bg-blue-600 text-white px-4 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-md flex items-center gap-2 whitespace-nowrap"
+                    className="btn-primary px-4 whitespace-nowrap"
                   >
                     <FaRulerCombined /> Map Tool
                   </button>
@@ -405,31 +680,29 @@ function FeasibilityForm() {
               {/* Other inputs */}
               <div className="group">
                 <label className="block text-sm font-bold text-gray-700 mb-2">Roof Type</label>
-                <select name="roof_type" value={formData.roof_type} onChange={handleChange} className="w-full p-4 border rounded-xl bg-white">
+                <select name="roof_type" value={formData.roof_type} onChange={handleChange} className="form-select">
                   <option value="RCC">RCC (Concrete)</option>
-                  <option value="sheet">Metal Sheet</option>
-                  <option value="tiles">Clay Tiles</option>
-                  <option value="thatched">Thatched</option>
+                  <option value="metal_sheet">Metal Sheet</option>
+                  <option value="tile">Clay Tiles</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
 
               <div className="group">
                 <label className="block text-sm font-bold text-gray-700 mb-2">Soil Type</label>
-                <select name="soil_type" value={formData.soil_type} onChange={handleChange} className="w-full p-4 border rounded-xl bg-white">
+                <select name="soil_type" value={formData.soil_type} onChange={handleChange} className="form-select">
                   <option value="sand">Sandy</option>
-                  <option value="clay">Clay</option>
                   <option value="loam">Loamy</option>
-                  <option value="rocky">Rocky</option>
+                  <option value="clay">Clay</option>
                 </select>
               </div>
 
               <div className="group">
                 <label className="block text-sm font-bold text-gray-700 mb-2">Usage Type</label>
-                <select name="use_type" value={formData.use_type} onChange={handleChange} className="w-full p-4 border rounded-xl bg-white">
+                <select name="use_type" value={formData.use_type} onChange={handleChange} className="form-select">
                   <option value="domestic">Domestic</option>
-                  <option value="commercial">Commercial</option>
+                  <option value="institutional">Institutional</option>
                   <option value="industrial">Industrial</option>
-                  <option value="agricultural">Agricultural</option>
                 </select>
               </div>
 
@@ -437,16 +710,16 @@ function FeasibilityForm() {
                 <label className="block text-sm font-bold text-gray-700 mb-2">Occupants</label>
                 <div className="relative">
                   <FaUserCircle className="absolute left-4 top-4 text-gray-400" />
-                  <input type="number" name="num_occupants" value={formData.num_occupants} onChange={handleChange} className="w-full pl-11 pr-4 py-4 border rounded-xl" required />
+                  <input type="number" name="num_occupants" value={formData.num_occupants} onChange={handleChange} className="form-input pl-11" required />
                 </div>
               </div>
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-bold text-gray-700 mb-2">Preferred System</label>
-                <select name="system_type" value={formData.system_type} onChange={handleChange} className="w-full p-4 border rounded-xl bg-white">
+                <select name="system_type" value={formData.system_type} onChange={handleChange} className="form-select">
                   <option value="storage">Storage Tank</option>
                   <option value="recharge">Groundwater Recharge</option>
-                  <option value="both">Hybrid (Both)</option>
+                  <option value="hybrid">Hybrid (Both)</option>
                 </select>
               </div>
 
@@ -454,8 +727,7 @@ function FeasibilityForm() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`w-full py-5 rounded-2xl text-xl font-bold text-white shadow-xl transition-all
-                    ${loading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
+                  className="btn-primary w-full py-5 text-xl"
                 >
                   {loading ? "Calculating..." : "Calculate Feasibility"}
                 </button>
@@ -470,3 +742,4 @@ function FeasibilityForm() {
 }
 
 export default FeasibilityForm;
+

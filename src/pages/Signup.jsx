@@ -8,10 +8,8 @@ function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -24,26 +22,24 @@ function Signup() {
     setSuccess("");
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match!");
+      setError("Passwords do not match.");
       return;
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters!");
+      setError("Password must be at least 6 characters.");
       return;
     }
 
     setLoading(true);
 
     try {
-      const userData = { username, email, password };
-
-      await registerUser(userData);
-      setSuccess("Account Created! Redirecting...");
+      await registerUser({ username, email, password });
+      setSuccess("Account created. Taking you to login...");
 
       setTimeout(() => {
-        navigate("/"); // Redirect to Login after signup
-      }, 2000);
+        navigate("/");
+      }, 1400);
     } catch (err) {
       setError(err.detail || "Signup failed. Please try again.");
     } finally {
@@ -52,180 +48,147 @@ function Signup() {
   };
 
   return (
-    <div className="min-h-screen w-screen bg-gradient-to-br from-slate-50 to-blue-100 flex flex-col items-center overflow-x-hidden font-sans text-gray-800">
-      
-      {/* --- NAVBAR --- */}
-      <nav className="w-full bg-white shadow-md py-3 px-6 flex items-center justify-between fixed top-0 left-0 z-50">
-        
-        {/* Logo */}
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/home")}>
-          <div className="bg-blue-600 p-2 rounded-lg">
-            <FaTint className="text-white text-xl" />
+    <div className="app-shell">
+      <nav className="nav-shell">
+        <button className="brand-lockup text-left" onClick={() => navigate("/")} type="button">
+          <div className="brand-mark">
+            <FaTint />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-blue-700">RTRWH Platform</h2>
-            <p className="text-xs text-gray-500 -mt-1">Water Conservation Heroes</p>
+            <h2 className="brand-title">RTRWH Platform</h2>
+            <p className="brand-subtitle">Rooftop water intelligence</p>
           </div>
-        </div>
+        </button>
 
-        {/* Nav Links */}
-        <div className="hidden md:flex items-center gap-8 text-gray-700 font-medium">
-          {/* <Link to="/home" className="hover:text-blue-600 transition-colors">Home</Link>
-          <a href="#about" className="hover:text-blue-600 transition-colors">About</a>
-          
-          <select className="border border-gray-300 rounded-lg px-2 py-1 text-gray-700 bg-white focus:outline-none cursor-pointer">
-            <option>EN</option>
-            <option>HI</option>
-            <option>AS</option>
-          </select> */}
-
-          {/* Link to Login since we are on Signup */}
-          <Link to="/login" className="px-5 py-2 bg-blue-100 text-blue-600 rounded-full font-bold hover:bg-blue-200 transition-colors">
+        <div className="nav-links">
+          <Link to="/" className="btn-ghost keep-mobile px-5 py-2">
             Login
           </Link>
         </div>
       </nav>
 
-      {/* --- MAIN CONTENT --- */}
-      <div className="w-full flex-grow flex items-center justify-center pt-28 pb-12 px-4">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100">
-          
-          {/* Header Section */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-8 text-center text-white">
-            <h1 className="text-3xl font-bold mb-2">Create Account</h1>
-            <p className="text-blue-100 text-sm opacity-90">
-              Join us to assess and save water efficiently.
-            </p>
+      <main className="auth-layout">
+        <section className="auth-story">
+          <span className="eyebrow">New Survey Crew</span>
+          <h1 className="display-title">
+            Turn an address into a <span className="accent">water plan.</span>
+          </h1>
+          <p className="lead">
+            Create an account to store assessments, compare catchment decisions, and generate
+            reports with component costs ready for the next site conversation.
+          </p>
+          <div className="water-tile mt-8">
+            <div className="tile-stat">
+              <strong>RTRWH</strong>
+              <p className="max-w-sm text-white/80 font-semibold">
+                Roof geometry, rainfall, tank sizing, recharge planning, and live product intelligence.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="auth-card">
+          <div className="auth-head">
+            <span className="eyebrow">Create Profile</span>
+            <h2 className="auth-title mt-4">Start assessing</h2>
+            <p className="text-white/75">A few details and your workspace is ready.</p>
           </div>
 
-          <div className="p-8">
-            
-            {/* Messages */}
-            {error && (
-              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r-lg text-sm font-medium">
-                {error}
-              </div>
-            )}
-            {success && (
-              <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 rounded-r-lg text-sm font-medium">
-                {success}
-              </div>
-            )}
+          <div className="auth-body">
+            {error && <div className="alert alert-error mb-5">{error}</div>}
+            {success && <div className="alert alert-success mb-5">{success}</div>}
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              
-              {/* Username Input */}
-              <div className="group">
-                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Username</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <FaUser className="text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-                  </div>
+              <div>
+                <label className="field-label">Username</label>
+                <div className="field-wrap">
+                  <FaUser className="field-icon" />
                   <input
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
-                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 font-medium focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                    placeholder="john_doe"
+                    className="form-input"
+                    placeholder="site_lead"
                   />
                 </div>
               </div>
 
-              {/* Email Input */}
-              <div className="group">
-                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Email Address</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <FaEnvelope className="text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-                  </div>
+              <div>
+                <label className="field-label">Email Address</label>
+                <div className="field-wrap">
+                  <FaEnvelope className="field-icon" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 font-medium focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    className="form-input"
                     placeholder="you@example.com"
                   />
                 </div>
               </div>
 
-              {/* Password Input */}
-              <div className="group">
-                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Password</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <FaLock className="text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-                  </div>
+              <div>
+                <label className="field-label">Password</label>
+                <div className="field-wrap">
+                  <FaLock className="field-icon" />
                   <input
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="w-full pl-11 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 font-medium focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                    placeholder="Min 6 chars"
+                    className="form-input pr-14"
+                    placeholder="At least 6 characters"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors focus:outline-none"
+                    className="password-toggle"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
-                    {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
               </div>
 
-              {/* Confirm Password Input */}
-              <div className="group">
-                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Confirm Password</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <FaLock className="text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-                  </div>
+              <div>
+                <label className="field-label">Confirm Password</label>
+                <div className="field-wrap">
+                  <FaLock className="field-icon" />
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
-                    className="w-full pl-11 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 font-medium focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                    placeholder="Confirm password"
+                    className="form-input pr-14"
+                    placeholder="Repeat password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors focus:outline-none"
+                    className="password-toggle"
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                   >
-                    {showConfirmPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                    {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
               </div>
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className={`w-full py-4 rounded-xl text-lg font-bold text-white shadow-lg transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2
-                  ${loading 
-                    ? "bg-gray-400 cursor-not-allowed" 
-                    : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                  }`}
-              >
-                {loading ? "Creating Account..." : <>Sign Up <FaArrowRight /></>}
+              <button type="submit" disabled={loading} className="btn-primary w-full py-4 text-lg">
+                {loading ? "Creating workspace..." : <>Sign Up <FaArrowRight /></>}
               </button>
-
             </form>
 
-            <div className="mt-8 text-center">
-              <p className="text-gray-500 font-medium">
-                Already have an account?{" "}
-                <Link to="/" className="text-blue-700 font-bold hover:underline">
-                  Login here
-                </Link>
-              </p>
-            </div>
+            <p className="mt-7 text-center text-[color:var(--muted)] font-semibold">
+              Already registered?{" "}
+              <Link to="/" className="text-[color:var(--canal)] font-extrabold">
+                Login here
+              </Link>
+            </p>
           </div>
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   );
 }

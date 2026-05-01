@@ -5,6 +5,8 @@ import Signup from "./pages/Signup";
 import HomePage from "./pages/Homepage";
 import FeasibilityForm from "./pages/Feasibility";
 import FeasibilityResult from "./pages/ResultFeasibility";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 import ProtectedRoute from "./components/protectedRoute.jsx";
 function App() {
   return (
@@ -17,6 +19,8 @@ function App() {
           <Route path="/home" element={<HomePage/>} />
           <Route path="/feasibility" element={<FeasibilityForm />} />
           <Route path="/result" element={<FeasibilityResult />} />
+          <Route path="/blogs" element={<Blog />} />
+          <Route path="/blogs/:slug" element={<BlogPost />} />
         </Route>
         <Route path="*" element={<div>Page Not Found</div>} />
       </Routes>

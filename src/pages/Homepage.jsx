@@ -1,148 +1,150 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import { FaBars, FaUserCircle, FaTint } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { FaArrowRight, FaClipboardCheck, FaLeaf, FaRupeeSign, FaTint, FaUserCircle, FaWater } from "react-icons/fa";
+
 function HomePage() {
   const navigate = useNavigate();
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     navigate("/");
   };
+
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 to-teal-50">
-
-      {/* ---------------- NAVBAR ---------------- */}
-      <nav className="w-full bg-white shadow-md py-3 px-6 flex items-center justify-between fixed top-0 left-0 z-50">
-
-        {/* Logo */}
-        <div className="flex items-center gap-2">
-          {/* <FaBars className="text-blue-600 text-2xl" /> */}
-          <div className="bg-blue-600 p-2 rounded-lg">
-            <FaTint className="text-white text-xl" />
+    <div className="app-shell">
+      <nav className="nav-shell">
+        <button className="brand-lockup text-left" onClick={() => navigate("/home")} type="button">
+          <div className="brand-mark">
+            <FaTint />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-blue-700">RTRWH Assessment Platform</h2>
-            <p className="text-xs text-gray-500 -mt-1">Water Conservation Heroes</p>
+            <h2 className="brand-title">RTRWH Assessment</h2>
+            <p className="brand-subtitle">Rooftop water intelligence</p>
           </div>
-        </div>
+        </button>
 
-        {/* Navigation */}
-        <div className="flex items-center gap-8 text-gray-700 font-medium">
-
-          <a href="#" className="text-blue-700 font-semibold">Home</a>
-          <a href="#about" className="hover:text-blue-600">About</a>
-          <a href="#chatbot" className="hover:text-blue-600">AI Chatbot</a>
-
-          <button onClick={() => navigate("/feasibility")} className="px-4 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg shadow">
-            Start Assessment
+        <div className="nav-links">
+          <a href="#top" className="keep-mobile">Home</a>
+          <Link to="/blogs" className="keep-mobile">Blogs</Link>
+          <a href="#about">Method</a>
+          <button onClick={() => navigate("/feasibility")} className="btn-primary px-5 py-2" type="button">
+            Assess
           </button>
-
-          {/* Language Dropdown */}
-          <select className="border border-gray-300 rounded-lg px-2 py-1 text-gray-700">
+          <select className="nav-select" aria-label="Language">
             <option>EN</option>
             <option>HI</option>
             <option>AS</option>
             <option>BN</option>
           </select>
-
-          {/* Profile/Login */}
-          <button
-            onClick={handleLogout}
-            className="focus:outline-none"
-            title="Logout"
-          >
-            <FaUserCircle className="text-3xl text-gray-600 hover:text-red-600 cursor-pointer transition-colors" />
+          <button onClick={handleLogout} className="icon-button" title="Logout" type="button">
+            <FaUserCircle />
           </button>
         </div>
       </nav>
 
-      {/* Add spacing due to fixed navbar */}
-      <div className="pt-24"></div>
+      <main id="top" className="page-pad">
+        <section className="hero-grid max-w-7xl mx-auto">
+          <div className="stagger-in">
+            <span className="eyebrow">
+              <FaWater /> Rainwater Yield Studio
+            </span>
+            <h1 className="display-title">
+              Every roof has a <span className="accent">water signature.</span>
+            </h1>
+            <p className="lead">
+              Measure rooftop potential, estimate storage or recharge needs, and price real-world
+              components without turning the assessment into a spreadsheet hunt.
+            </p>
+            <div className="flex flex-wrap gap-4 mt-8">
+              <button onClick={() => navigate("/feasibility")} className="btn-primary px-7 py-4 text-lg" type="button">
+                Start Assessment <FaArrowRight />
+              </button>
+              <a href="#about" className="btn-ghost px-7 py-4 text-lg">
+                See Method
+              </a>
+              <Link to="/blogs" className="btn-secondary px-7 py-4 text-lg">
+                Read Blogs
+              </Link>
+            </div>
 
-      {/* ---------------- HERO SECTION ---------------- */}
-      <section className="px-10 py-16 flex flex-col items-start">
-
-        <span className="px-4 py-1 bg-green-100 text-green-700 font-medium rounded-full">
-          Eco-Friendly Solution
-        </span>
-
-        <h1 className="text-5xl font-bold mt-4 leading-tight">
-          <span className="text-blue-700"> Transforming Rooftops into</span>  <br />
-          <span className="text-purple-600">Water Conservation Heroes</span>
-        </h1>
-
-        <p className="text-gray-700 mt-4 max-w-2xl">
-          Join the revolution in sustainable water management. Assess your rainwater
-          harvesting potential and contribute to groundwater conservation with our
-          advanced AI-powered assessment tool.
-        </p>
-
-        {/* Stats Section */}
-        <div className="flex gap-10 mt-10">
-          <div>
-            <h2 className="text-3xl font-bold text-blue-600">2.4B+</h2>
-            <p className="text-gray-700">Liters Annual Potential</p>
+            <div className="stat-row">
+              <div className="metric-card">
+                <strong>2.4B+</strong>
+                <span>liters modeled as annual potential</span>
+              </div>
+              <div className="metric-card">
+                <strong>80%</strong>
+                <span>water conservation planning target</span>
+              </div>
+              <div className="metric-card">
+                <strong>Rs50K</strong>
+                <span>average long-term saving signal</span>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <h2 className="text-3xl font-bold text-green-600">80%</h2>
-            <p className="text-gray-700">Water Conservation</p>
+          <div className="water-tile">
+            <div className="tile-stat">
+              <span className="eyebrow bg-white/20 text-white border-white/20">Field Preview</span>
+              <strong>42m2</strong>
+              <p className="max-w-xs text-white/80 font-semibold">
+                Roof capture, rainfall depth, tank volume, and product cost converge into one report.
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <section id="about" className="section-band">
+        <div className="max-w-7xl mx-auto">
+          <span className="eyebrow">Designed For Decisions</span>
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-5 mt-5">
+            <h2 className="section-title max-w-3xl">Less guesswork between survey and installation.</h2>
+            <p className="lead max-w-md">
+              The interface follows the actual assessment path: locate, size, compare, and act.
+            </p>
           </div>
 
-          <div>
-            <h2 className="text-3xl font-bold text-orange-600">₹50K</h2>
-            <p className="text-gray-700">Average Savings</p>
+          <div className="feature-grid">
+            <div className="feature-card">
+              <div className="feature-kicker" />
+              <FaClipboardCheck className="text-[color:var(--canal)] text-3xl mb-5" />
+              <h3 className="font-display text-2xl font-extrabold text-[color:var(--night)]">Smart Assessment</h3>
+              <p className="text-[color:var(--muted)] mt-3">
+                Property inputs become harvestable volume, feasibility reasons, and practical next steps.
+              </p>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-kicker bg-[color:var(--leaf)]" />
+              <FaLeaf className="text-[color:var(--canal)] text-3xl mb-5" />
+              <h3 className="font-display text-2xl font-extrabold text-[color:var(--night)]">Recharge Ready</h3>
+              <p className="text-[color:var(--muted)] mt-3">
+                Storage, recharge, and hybrid approaches keep the recommendation tied to site conditions.
+              </p>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-kicker bg-[color:var(--sun)]" />
+              <FaRupeeSign className="text-[color:var(--canal)] text-3xl mb-5" />
+              <h3 className="font-display text-2xl font-extrabold text-[color:var(--night)]">Live Pricing</h3>
+              <p className="text-[color:var(--muted)] mt-3">
+                Filters, gutters, tanks, diverters, and recharge materials can be surfaced as priced products.
+              </p>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-kicker bg-[color:var(--canal)]" />
+              <FaTint className="text-[color:var(--canal)] text-3xl mb-5" />
+              <h3 className="font-display text-2xl font-extrabold text-[color:var(--night)]">Report Flow</h3>
+              <p className="text-[color:var(--muted)] mt-3">
+                Downloadable reports collect sizing, guidance, costs, and products into a single handoff.
+              </p>
+            </div>
           </div>
         </div>
-
-        {/* Buttons */}
-        <div className="flex gap-5 mt-8">
-          <button onClick={() => navigate("/feasibility")} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow">
-            Start Assessment
-          </button>
-
-          <button className="px-6 py-3 border border-gray-400 rounded-lg hover:bg-gray-200">
-            Learn More
-          </button>
-        </div>
-      </section>
-
-      {/* ---------------- SECOND SECTION ---------------- */}
-      <section id="about" className="px-10 py-20 bg-white shadow-inner rounded-t-3xl">
-
-        <h2 className="text-4xl font-bold text-center text-blue-700 mb-4">
-          Why Choose RTRWH?
-        </h2>
-        <p className="text-center text-gray-600 mb-12">
-          Discover the powerful benefits of rainwater harvesting
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 px-12">
-
-          <div className="text-center bg-blue-50 p-6 rounded-xl shadow">
-            <h3 className="text-xl font-semibold">Smart Assessment</h3>
-            <p className="text-gray-600 mt-2">AI-powered analysis of your property’s rainwater harvesting potential</p>
-          </div>
-
-          <div className="text-center bg-green-50 p-6 rounded-xl shadow">
-            <h3 className="text-xl font-semibold">Eco-Friendly</h3>
-            <p className="text-gray-600 mt-2">Reduce environmental impact and support sustainable water management</p>
-          </div>
-
-          <div className="text-center bg-purple-50 p-6 rounded-xl shadow">
-            <h3 className="text-xl font-semibold">Custom Solutions</h3>
-            <p className="text-gray-600 mt-2">Personalized recommendations based on your specific requirements</p>
-          </div>
-
-          <div className="text-center bg-orange-50 p-6 rounded-xl shadow">
-            <h3 className="text-xl font-semibold">Cost Savings</h3>
-            <p className="text-gray-600 mt-2">Reduce water bills and enjoy long-term economic benefits</p>
-          </div>
-
-        </div>
-
       </section>
     </div>
   );
