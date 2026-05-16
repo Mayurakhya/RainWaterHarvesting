@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaUserCircle, FaMapMarkerAlt, FaCloudRain, FaRulerCombined, FaTint, FaTimes, FaCheck } from "react-icons/fa";
 import axios from "axios";
@@ -44,9 +44,35 @@ const getAuthToken = () => {
 const RecenterAutomatically = ({ lat, lng }) => {
   const map = useMap();
   useEffect(() => {
-    map.invalidateSize();
+    const resizeMap = () => map.invalidateSize();
+    resizeMap();
+    const frameId = window.requestAnimationFrame(resizeMap);
+    const timeoutId = window.setTimeout(resizeMap, 250);
+
     map.setView([lat, lng], 18, { animate: true });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
+    };
   }, [lat, lng, map]);
+  return null;
+};
+
+const MapSizeInvalidator = () => {
+  const map = useMap();
+
+  useEffect(() => {
+    const invalidate = () => map.invalidateSize();
+    const frameId = window.requestAnimationFrame(invalidate);
+    const timeoutId = window.setTimeout(invalidate, 300);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [map]);
+
   return null;
 };
 
@@ -67,8 +93,47 @@ const MapClickSelector = ({ onSelect }) => {
   return null;
 };
 
-// --- MAP MODAL COMPONENT ---
-const MapAreaModal = ({ onClose, onConfirm, onLocationConfirm, initialCenter }) => {
+const getPolygonOuterRing = (layer) => {
+  const latlngs = layer.getLatLngs?.();
+  const outerRing = Array.isArray(latlngs?.[0]) ? latlngs[0] : latlngs;
+
+  if (!Array.isArray(outerRing)) return [];
+
+  return outerRing.filter(
+    (point) => Number.isFinite(point?.lat) && Number.isFinite(point?.lng)
+  );
+};
+
+// --- HELPER: Calculate area using local projection + Shoelace formula (fallback) ---
+const calculatePolygonArea = (latlngs) => {
+  if (!Array.isArray(latlngs) || latlngs.length < 3) return 0;
+
+  const validLatLngs = latlngs.filter(
+    (point) => Number.isFinite(point?.lat) && Number.isFinite(point?.lng)
+  );
+  if (validLatLngs.length < 3) return 0;
+
+  const averageLat =
+    validLatLngs.reduce((total, point) => total + point.lat, 0) / validLatLngs.length;
+  const latScale = 111320;
+  const lngScale = latScale * Math.cos((averageLat * Math.PI) / 180);
+  const projectedPoints = validLatLngs.map((point) => ({
+    x: point.lng * lngScale,
+    y: point.lat * latScale,
+  }));
+
+  let area = 0;
+  for (let i = 0; i < projectedPoints.length; i++) {
+    const current = projectedPoints[i];
+    const next = projectedPoints[(i + 1) % projectedPoints.length];
+    area += current.x * next.y - next.x * current.y;
+  }
+
+  return Math.abs(area / 2);
+};
+
+// --- LOCATION MODAL COMPONENT ---
+const LocationModal = ({ onClose, onLocationConfirm, initialCenter }) => {
   const center =
     initialCenter && isValidCoordinate(initialCenter.lat) && isValidCoordinate(initialCenter.lng)
       ? [Number(initialCenter.lat), Number(initialCenter.lng)]
@@ -119,21 +184,8 @@ const MapAreaModal = ({ onClose, onConfirm, onLocationConfirm, initialCenter }) 
     }
   };
 
-  const _onCreated = (e) => {
-    const layer = e.layer;
-    if (layer.getLatLngs) {
-      const latlngs = layer.getLatLngs()[0];
-      const areaM2 = L.GeometryUtil.geodesicArea(latlngs);
-      const areaSqFt = (areaM2 * 10.7639).toFixed(2);
-
-      const message = `Rooftop Area Calculated:\n• ${areaM2.toFixed(2)} square meters\n• ${areaSqFt} square feet\n\nUse this value?`;
-
-      if (window.confirm(message)) {
-        onConfirm(areaM2);
-      } else {
-        layer.remove();
-      }
-    }
+  const handleConfirmLocation = () => {
+    onLocationConfirm(selectedLocation);
   };
 
   return (
@@ -142,16 +194,16 @@ const MapAreaModal = ({ onClose, onConfirm, onLocationConfirm, initialCenter }) 
         <div className="bg-gray-900 p-4 flex justify-between items-center text-white shadow-md z-10">
           <div className="min-w-0">
             <h3 className="font-bold text-lg flex items-center gap-2">
-              <FaRulerCombined className="text-green-400" /> Map Location & Area Tool
+              <FaMapMarkerAlt className="text-blue-400" /> Select Location
             </h3>
-            <p className="text-xs text-gray-400">Search a place, click the map to choose a location, or draw around your roof.</p>
+            <p className="text-xs text-gray-400">Search for a place or click on the map to select a location.</p>
           </div>
           <button onClick={onClose} className="bg-red-600 hover:bg-red-700 p-2 rounded-lg transition-colors text-white font-bold px-4">
-            Close Tool
+            Close
           </button>
         </div>
         <div className="bg-white border-b border-gray-200 p-4 z-10">
-          <form onSubmit={handleSearchLocation} className="flex flex-col md:flex-row gap-3">
+          <form onSubmit={handleSearchLocation} className="flex flex-col md:flex-row gap-3 mb-3">
             <input
               type="text"
               value={searchQuery}
@@ -160,19 +212,12 @@ const MapAreaModal = ({ onClose, onConfirm, onLocationConfirm, initialCenter }) 
               placeholder="Search village, city, landmark, or address"
             />
             <button type="submit" disabled={searching} className="btn-primary px-6 py-3">
-              {searching ? "Searching..." : "Search Map"}
-            </button>
-            <button
-              type="button"
-              onClick={() => onLocationConfirm(selectedLocation)}
-              className="btn-secondary px-6 py-3"
-            >
-              Use This Location
+              {searching ? "Searching..." : "Search"}
             </button>
           </form>
-          {searchError && <p className="text-sm text-red-600 font-semibold mt-2">{searchError}</p>}
+          {searchError && <p className="text-sm text-red-600 font-semibold mb-3">{searchError}</p>}
           {searchResults.length > 0 && (
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
               {searchResults.map((result) => (
                 <button
                   type="button"
@@ -186,20 +231,133 @@ const MapAreaModal = ({ onClose, onConfirm, onLocationConfirm, initialCenter }) 
               ))}
             </div>
           )}
-          <div className="mt-3 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 font-semibold">
-            Selected: {selectedLocation.label}
-            <span className="block text-xs mt-1">
-              Lat {selectedLocation.lat.toFixed(6)} - Lon {selectedLocation.lng.toFixed(6)}
-            </span>
+          <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 font-semibold flex justify-between items-center">
+            <div>
+              Selected: {selectedLocation.label}
+              <span className="block text-xs mt-1">
+                Lat {selectedLocation.lat.toFixed(6)} - Lon {selectedLocation.lng.toFixed(6)}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleConfirmLocation}
+              className="btn-secondary px-6 py-2 whitespace-nowrap ml-4"
+            >
+              Confirm Location
+            </button>
           </div>
         </div>
         <div className="flex-grow relative">
-          <MapContainer center={[selectedLocation.lat, selectedLocation.lng]} zoom={18} style={{ height: '100%', width: '100%' }}>
+          <MapContainer center={[selectedLocation.lat, selectedLocation.lng]} zoom={12} style={{ height: '100%', width: '100%' }}>
             <RecenterAutomatically lat={selectedLocation.lat} lng={selectedLocation.lng} />
             <MapClickSelector onSelect={handleSelectLocation} />
-            <FeatureGroup>
+            <LayersControl position="topright">
+              <LayersControl.BaseLayer checked name="Satellite View (Esri)">
+                <TileLayer
+                  attribution='&copy; Esri'
+                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                />
+              </LayersControl.BaseLayer>
+              <LayersControl.BaseLayer name="OpenStreetMap">
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              </LayersControl.BaseLayer>
+            </LayersControl>
+            <Marker position={[selectedLocation.lat, selectedLocation.lng]}>
+              <Popup>{selectedLocation.label}</Popup>
+            </Marker>
+          </MapContainer>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- AREA CALCULATION MODAL COMPONENT ---
+const AreaCalculationModal = ({ onClose, onAreaConfirm, initialCenter, locationLabel }) => {
+  const drawnItemsRef = useRef(null);
+  const center =
+    initialCenter && isValidCoordinate(initialCenter.lat) && isValidCoordinate(initialCenter.lng)
+      ? [Number(initialCenter.lat), Number(initialCenter.lng)]
+      : DEFAULT_MAP_CENTER;
+
+  const _onCreated = (e) => {
+    try {
+      const layer = e.layer;
+      if (!layer?.getLatLngs) {
+        alert("Error: Unable to get coordinates from drawn shape. Please try again.");
+        return;
+      }
+
+      drawnItemsRef.current?.clearLayers();
+      drawnItemsRef.current?.addLayer(layer);
+
+      const latlngs = getPolygonOuterRing(layer);
+      if (!latlngs || latlngs.length < 3) {
+        alert("Please draw a polygon with at least 3 points.");
+        layer.remove();
+        return;
+      }
+
+      let areaM2 = 0;
+      
+      // Try using L.GeometryUtil if available, otherwise use fallback
+      if (L.GeometryUtil && typeof L.GeometryUtil.geodesicArea === 'function') {
+        areaM2 = L.GeometryUtil.geodesicArea(latlngs);
+      } else {
+        areaM2 = calculatePolygonArea(latlngs);
+      }
+
+      if (!Number.isFinite(areaM2) || areaM2 <= 0) {
+        alert("Error calculating area. Please try drawing again.");
+        layer.remove();
+        return;
+      }
+
+      const areaSqFt = (areaM2 * 10.7639).toFixed(2);
+      const message = `Rooftop Area Calculated:\n• ${areaM2.toFixed(2)} square meters\n• ${areaSqFt} square feet\n\nUse this value?`;
+
+      if (window.confirm(message)) {
+        onAreaConfirm(areaM2);
+      } else {
+        drawnItemsRef.current?.removeLayer(layer);
+      }
+    } catch (error) {
+      console.error("Error calculating area:", error);
+      alert("Error calculating area. Please try drawing again.");
+      try {
+        e.layer?.remove?.();
+      } catch (e) {
+        console.error("Error removing layer:", e);
+      }
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white w-full max-w-6xl h-[85vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden relative border border-gray-600">
+        <div className="bg-gray-900 p-4 flex justify-between items-center text-white shadow-md z-10">
+          <div className="min-w-0">
+            <h3 className="font-bold text-lg flex items-center gap-2">
+              <FaRulerCombined className="text-green-400" /> Calculate Rooftop Area
+            </h3>
+            <p className="text-xs text-gray-400">Draw a polygon around your roof to calculate the area.</p>
+          </div>
+          <button onClick={onClose} className="bg-red-600 hover:bg-red-700 p-2 rounded-lg transition-colors text-white font-bold px-4">
+            Close
+          </button>
+        </div>
+        <div className="bg-blue-50 border-b border-blue-200 p-3 z-10">
+          <p className="text-sm text-blue-800 font-semibold">
+            📍 Location: {locationLabel}
+          </p>
+        </div>
+        <div className="flex-grow relative">
+          <MapContainer center={[center[0], center[1]]} zoom={18} style={{ height: '100%', width: '100%' }}>
+            <RecenterAutomatically lat={center[0]} lng={center[1]} />
+            <MapSizeInvalidator />
+            <FeatureGroup ref={drawnItemsRef}>
               <EditControl
-                position="topright"
+                position="topleft"
                 onCreated={_onCreated}
                 draw={{
                   rectangle: false,
@@ -208,9 +366,9 @@ const MapAreaModal = ({ onClose, onConfirm, onLocationConfirm, initialCenter }) 
                   marker: false,
                   polyline: false,
                   polygon: {
-                    allowIntersection: false,
-                    showArea: false,
-                    shapeOptions: { color: '#00ff00' },
+                    metric: true,
+                    feet: true,
+                    shapeOptions: { color: '#16a34a', fillColor: '#22c55e', fillOpacity: 0.2, weight: 3 },
                   },
                 }}
               />
@@ -226,9 +384,6 @@ const MapAreaModal = ({ onClose, onConfirm, onLocationConfirm, initialCenter }) 
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               </LayersControl.BaseLayer>
             </LayersControl>
-            <Marker position={[selectedLocation.lat, selectedLocation.lng]}>
-              <Popup>{selectedLocation.label}</Popup>
-            </Marker>
           </MapContainer>
         </div>
       </div>
@@ -261,7 +416,8 @@ function FeasibilityForm() {
 
   const [loading, setLoading] = useState(false);
   const [fetchingLocation, setFetchingLocation] = useState(false);
-  const [showMap, setShowMap] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showAreaModal, setShowAreaModal] = useState(false);
   const [locationStatus, setLocationStatus] = useState("");
   const [locationError, setLocationError] = useState("");
   const [manualCoords, setManualCoords] = useState({
@@ -341,9 +497,17 @@ function FeasibilityForm() {
     await applyLocationCoordinates(lat, lon, "Custom location");
   };
 
-  const handleMapLocationConfirm = async ({ lat, lng, label }) => {
+  const handleLocationConfirm = async ({ lat, lng, label }) => {
     await applyLocationCoordinates(lat, lng, label || "Map location");
-    setShowMap(false);
+    setShowLocationModal(false);
+  };
+
+  const handleAreaConfirmed = (areaM2) => {
+    setFormData((prev) => ({
+      ...prev,
+      roof_area_m2: areaM2.toFixed(2)
+    }));
+    setShowAreaModal(false);
   };
 
   const handleDetectLocation = () => {
@@ -397,14 +561,6 @@ function FeasibilityForm() {
         maximumAge: 0,
       }
     );
-  };
-
-  const handleAreaCalculated = (areaM2) => {
-    setFormData((prev) => ({
-      ...prev,
-      roof_area_m2: areaM2.toFixed(2)
-    }));
-    setShowMap(false);
   };
 
   const handleSubmit = async (e) => {
@@ -485,7 +641,6 @@ function FeasibilityForm() {
 
           <Link to="/home" className="hover:text-blue-600 transition-colors">Home</Link>
           <Link to="/blogs" className="hover:text-blue-600 transition-colors">Blogs</Link>
-          <a href="#about" className="hover:text-blue-600 transition-colors">Method</a>
 
           {/* ACTIVE ASSESSMENT BUTTON */}
           <button
@@ -515,16 +670,28 @@ function FeasibilityForm() {
         </div>
       </nav>
 
-      {showMap && (
-        <MapAreaModal
-          onClose={() => setShowMap(false)}
-          onConfirm={handleAreaCalculated}
-          onLocationConfirm={handleMapLocationConfirm}
+      {showLocationModal && (
+        <LocationModal
+          onClose={() => setShowLocationModal(false)}
+          onLocationConfirm={handleLocationConfirm}
           initialCenter={
             isValidCoordinate(formData.latitude) && isValidCoordinate(formData.longitude)
-              ? { lat: formData.latitude, lng: formData.longitude, label: formData.location || "Current assessment location" }
+              ? { lat: formData.latitude, lng: formData.longitude, label: formData.location || "Current location" }
               : null
           }
+        />
+      )}
+
+      {showAreaModal && (
+        <AreaCalculationModal
+          onClose={() => setShowAreaModal(false)}
+          onAreaConfirm={handleAreaConfirmed}
+          initialCenter={
+            isValidCoordinate(formData.latitude) && isValidCoordinate(formData.longitude)
+              ? { lat: formData.latitude, lng: formData.longitude }
+              : null
+          }
+          locationLabel={formData.location || "Unknown location"}
         />
       )}
 
@@ -561,10 +728,10 @@ function FeasibilityForm() {
                       <span>Lon {Number(formData.longitude).toFixed(6)}</span>
                       <button
                         type="button"
-                        onClick={() => setShowMap(true)}
+                        onClick={() => setShowAreaModal(true)}
                         className="btn-ghost px-4 py-2"
                       >
-                        Open Map at Current Location
+                        Calculate Roof Area
                       </button>
                     </div>
                   )}
@@ -607,7 +774,7 @@ function FeasibilityForm() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowMap(true)}
+                  onClick={() => setShowLocationModal(true)}
                   className="btn-secondary px-6 py-4 whitespace-nowrap"
                 >
                   Choose From Map
@@ -669,7 +836,13 @@ function FeasibilityForm() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setShowMap(true)}
+                    onClick={() => {
+                      if (!isValidCoordinate(formData.latitude) || !isValidCoordinate(formData.longitude)) {
+                        alert("Please set a location first before calculating roof area.");
+                        return;
+                      }
+                      setShowAreaModal(true);
+                    }}
                     className="btn-primary px-4 whitespace-nowrap"
                   >
                     <FaRulerCombined /> Map Tool
@@ -742,4 +915,3 @@ function FeasibilityForm() {
 }
 
 export default FeasibilityForm;
-
