@@ -440,7 +440,7 @@ function Landing() {
             <div className="preview-grid">
               <div>
                 <span>Annual yield</span>
-                <strong>48,300 L</strong>
+                <strong>57,030 L</strong>
               </div>
               <div>
                 <span>Recharge fit</span>
@@ -448,7 +448,7 @@ function Landing() {
               </div>
               <div>
                 <span>Materials</span>
-                <strong>Rs 38K</strong>
+                <strong>Rs 99K</strong>
               </div>
               <div>
                 <span>Report</span>
