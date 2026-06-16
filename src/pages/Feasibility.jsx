@@ -429,7 +429,7 @@ function FeasibilityForm() {
     location: "",
     roof_area_m2: "",
     roof_type: "RCC",
-    annual_rainfall_mm: "3073.58",
+    annual_rainfall_mm: "0",
     use_type: "domestic",
     num_occupants: "4",
     system_type: "storage",
@@ -829,7 +829,24 @@ function FeasibilityForm() {
                 <FieldLabel badge={<span className="rounded-full bg-[#E1F5EE] px-2 py-0.5 text-[10px] font-bold text-[#0a8065]">✓ Verified</span>}>
                   Annual rainfall (mm)
                 </FieldLabel>
-                <input type="number" step="any" name="annual_rainfall_mm" value={formData.annual_rainfall_mm} onChange={handleChange} required className={inputClass} />
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="any"
+                    name="annual_rainfall_mm"
+                    value={formData.annual_rainfall_mm}
+                    onChange={handleChange}
+                    required
+                    className={`${inputClass} ${fetchingLocation ? "opacity-70" : ""}`}
+                    placeholder={fetchingLocation ? "Detecting rainfall..." : ""}
+                    disabled={fetchingLocation}
+                  />
+                  {fetchingLocation && (
+                    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-[#0a4f3c]" />
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
