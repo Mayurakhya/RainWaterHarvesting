@@ -38,7 +38,7 @@ function Signup() {
       setSuccess("Account created. Taking you to login...");
 
       setTimeout(() => {
-        navigate("/");
+        navigate("/login");
       }, 1400);
     } catch (err) {
       setError(err.detail || "Signup failed. Please try again.");
@@ -61,7 +61,7 @@ function Signup() {
         </button>
 
         <div className="nav-links">
-          <Link to="/" className="btn-ghost keep-mobile px-5 py-2">
+          <Link to="/login" className="btn-ghost keep-mobile px-5 py-2">
             Login
           </Link>
         </div>
@@ -182,7 +182,7 @@ function Signup() {
 
             <p className="mt-7 text-center text-[color:var(--muted)] font-semibold">
               Already registered?{" "}
-              <Link to="/" className="text-[color:var(--canal)] font-extrabold">
+              <Link to="/login" className="text-[color:var(--canal)] font-extrabold">
                 Login here
               </Link>
             </p>
