@@ -28,7 +28,7 @@ function HomePage() {
           </div>
         </button>
 
-        <div className="nav-links">
+        {/* <div className="nav-links">
           <a href="#top" className="keep-mobile">Home</a>
           <Link to="/blogs" className="keep-mobile">Blogs</Link>
           <a href="#about">Method</a>
@@ -38,7 +38,33 @@ function HomePage() {
           <button onClick={handleLogout} className="icon-button" title="Logout" aria-label="Logout" type="button">
             <FaSignOutAlt />
           </button>
-        </div>
+        </div> */}
+        <div className="nav-links">
+  <a href="#top" className="keep-mobile">Home</a>
+  <Link to="/blogs" className="keep-mobile">Blogs</Link>
+  <Link to="/projects" className="keep-mobile">
+    My Projects
+  </Link>
+  <a href="#about">Method</a>
+
+  <button
+    onClick={() => navigate("/feasibility")}
+    className="btn-primary px-5 py-2"
+    type="button"
+  >
+    Assess
+  </button>
+
+  <button
+    onClick={handleLogout}
+    className="icon-button"
+    title="Logout"
+    aria-label="Logout"
+    type="button"
+  >
+    <FaSignOutAlt />
+  </button>
+</div>
       </nav>
 
       <main id="top" className="page-pad">

@@ -1,5 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import ProjectsPage from "./pages/ProjectsPage.jsx";
+import ProjectDetails from "./pages/ProjectDetails.jsx";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -16,7 +18,11 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        
+        <Route path="/projects" element={<ProjectsPage />} />
+<Route
+  path="/projects/:id"
+  element={<ProjectDetails />}
+/>
        <Route element={<ProtectedRoute />}>
           <Route path="/home" element={<HomePage/>} />
           <Route path="/feasibility" element={<FeasibilityForm />} />
