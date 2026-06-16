@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaArrowRight, FaBookOpen, FaTint, FaUserCircle } from "react-icons/fa";
+import { FaArrowRight, FaBookOpen, FaSignOutAlt, FaTint } from "react-icons/fa";
 
 export const blogPosts = [
   {
@@ -130,6 +130,9 @@ function BlogNav() {
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    if (!window.confirm("Are you sure you want to logout?")) {
+      return;
+    }
     localStorage.removeItem("token");
     document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
@@ -154,8 +157,8 @@ function BlogNav() {
         <button onClick={() => navigate("/feasibility")} className="btn-primary px-5 py-2" type="button">
           Assess
         </button>
-        <button onClick={handleLogout} className="icon-button" title="Logout" type="button">
-          <FaUserCircle />
+        <button onClick={handleLogout} className="icon-button" title="Logout" aria-label="Logout" type="button">
+          <FaSignOutAlt />
         </button>
       </div>
     </nav>

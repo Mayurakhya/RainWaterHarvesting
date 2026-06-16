@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaUserCircle, FaMapMarkerAlt, FaCloudRain, FaRulerCombined, FaTint, FaTimes, FaCheck } from "react-icons/fa";
+import { FaSignOutAlt, FaMapMarkerAlt, FaCloudRain, FaRulerCombined, FaTint, FaCalculator, FaMap, FaMinus, FaPlus } from "react-icons/fa";
 import axios from "axios";
 
 // --- LEAFLET IMPORTS ---
@@ -25,6 +25,27 @@ L.Icon.Default.mergeOptions({
 const API_BASE_URL = import.meta.env.VITE_API_URL ;
 const DEFAULT_MAP_CENTER = [26.75, 94.22];
 const isValidCoordinate = (value) => Number.isFinite(Number(value));
+const selectChevron =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%2363706b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")";
+
+const DividerLabel = ({ children }) => (
+  <div className="flex items-center gap-3">
+    <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#7a8580]">{children}</span>
+    <span className="h-px flex-1 bg-[#e7e7e4]" />
+  </div>
+);
+
+const FieldLabel = ({ children, badge }) => (
+  <label className="mb-1.5 flex items-center gap-2 text-[12px] font-semibold text-[#26312f]">
+    {children}
+    {badge}
+  </label>
+);
+
+const inputClass =
+  "w-full rounded-lg border border-[#e0e0e0] bg-[#f5f5f3] px-3 py-[9px] text-[13px] text-[#102321] outline-none transition-colors focus:border-[#5DCAA5]";
+
+const selectClass = `${inputClass} appearance-none bg-no-repeat pr-9`;
 
 // --- HELPER: GET TOKEN (Cookies -> LocalStorage) ---
 const getAuthToken = () => {
@@ -395,6 +416,9 @@ const AreaCalculationModal = ({ onClose, onAreaConfirm, initialCenter, locationL
 function FeasibilityForm() {
   const navigate = useNavigate();
   const handleLogout = () => {
+    if (!window.confirm("Are you sure you want to logout?")) {
+      return;
+    }
     localStorage.removeItem("token");
     document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
@@ -405,9 +429,9 @@ function FeasibilityForm() {
     location: "",
     roof_area_m2: "",
     roof_type: "RCC",
-    annual_rainfall_mm: "",
+    annual_rainfall_mm: "3073.58",
     use_type: "domestic",
-    num_occupants: "",
+    num_occupants: "4",
     system_type: "storage",
     soil_type: "sand",
     latitude: null,
@@ -418,8 +442,10 @@ function FeasibilityForm() {
   const [fetchingLocation, setFetchingLocation] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showAreaModal, setShowAreaModal] = useState(false);
+  const [showCustomLocation, setShowCustomLocation] = useState(false);
   const [locationStatus, setLocationStatus] = useState("");
   const [locationError, setLocationError] = useState("");
+  const [detectedLocation, setDetectedLocation] = useState(null);
   const [manualCoords, setManualCoords] = useState({
     latitude: "",
     longitude: "",
@@ -510,6 +536,16 @@ function FeasibilityForm() {
     setShowAreaModal(false);
   };
 
+  const updateOccupants = (change) => {
+    setFormData((prev) => {
+      const current = Number.parseInt(prev.num_occupants, 10) || 1;
+      return {
+        ...prev,
+        num_occupants: String(Math.max(1, current + change)),
+      };
+    });
+  };
+
   const handleDetectLocation = () => {
     if (!navigator.geolocation) {
       setLocationError("Geolocation is not supported by this browser.");
@@ -529,6 +565,7 @@ function FeasibilityForm() {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
         const accuracy = Math.round(position.coords.accuracy || 0);
+        setDetectedLocation({ lat, lon, accuracy });
 
         setFormData((prev) => ({
           ...prev,
@@ -571,7 +608,7 @@ function FeasibilityForm() {
 
     if (!token) {
       alert("You are not logged in. Please login first.");
-      navigate("/");
+      navigate("/login");
       return;
     }
 
@@ -651,21 +688,14 @@ function FeasibilityForm() {
             Active
           </button>
 
-          {/* Language Dropdown */}
-          <select className="nav-select">
-            <option>EN</option>
-            <option>HI</option>
-            <option>AS</option>
-            <option>BN</option>
-          </select>
-
-          {/* Profile */}
+          {/* Logout */}
           <button
             onClick={handleLogout}
             className="icon-button"
             title="Logout"
+            aria-label="Logout"
           >
-            <FaUserCircle />
+            <FaSignOutAlt />
           </button>
         </div>
       </nav>
@@ -695,6 +725,210 @@ function FeasibilityForm() {
         />
       )}
 
+      <div className="px-4 pb-12 pt-28 font-sans">
+        <div className="mx-auto w-[84%] max-w-[1100px] rounded-[20px] border border-[#e8ebe7] bg-white">
+          <div className="relative overflow-hidden rounded-t-[20px] bg-[#0d2e24] px-6 py-7">
+            <div className="absolute -right-12 -top-12 h-36 w-36 rounded-full bg-[#1e8f77]/25" />
+            <div className="relative">
+              <span className="inline-flex rounded-full bg-[#1e8f77]/30 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[#9FE1CB]">
+                Feasibility Check
+              </span>
+              <h2 className="mt-4 text-[30px] font-extrabold leading-[1.05] text-white">
+                Map the roof. Run the numbers.
+              </h2>
+              <p className="mt-3 max-w-md text-[15px] leading-6 text-[#9FE1CB]">
+                Estimate rainfall yield, roof catchment, storage needs, and site fit from one focused form.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-[14px] p-5">
+            <DividerLabel>Location</DividerLabel>
+
+            <button
+              type="button"
+              onClick={handleDetectLocation}
+              disabled={fetchingLocation}
+              className="relative flex w-full items-center justify-center rounded-xl bg-[#c96d2c] px-4 py-3.5 text-[15px] font-bold text-white transition-colors hover:bg-[#b75f23] disabled:opacity-70"
+            >
+              <FaMapMarkerAlt className={`absolute left-4 ${fetchingLocation ? "animate-bounce" : ""}`} />
+              {fetchingLocation ? "Detecting location..." : "Auto-detect location & rainfall"}
+            </button>
+
+            {(locationError || detectedLocation || isValidCoordinate(formData.latitude)) && (
+              <div className={`flex flex-col gap-3 rounded-xl border px-4 py-3 text-[13px] sm:flex-row sm:items-center sm:justify-between ${
+                locationError ? "border-red-200 bg-red-50 text-red-700" : "border-[#5DCAA5] bg-[#E1F5EE] text-[#0d4f3f]"
+              }`}>
+                <div className="flex items-start gap-3">
+                  <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${locationError ? "bg-red-500" : "bg-[#239b72]"}`} />
+                  <div className="font-semibold">
+                    {locationError ? (
+                      locationError
+                    ) : (
+                      <>
+                        Location detected · ~{detectedLocation?.accuracy || 200} m accuracy
+                        <span className="block text-[12px] font-medium">
+                          Lat {Number(formData.latitude).toFixed(6)} · Lon {Number(formData.longitude).toFixed(6)}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {!locationError && (
+                  <button
+                    type="button"
+                    onClick={() => detectedLocation && applyLocationCoordinates(detectedLocation.lat, detectedLocation.lon, "Current location")}
+                    className="self-start rounded-full bg-white px-3 py-1 text-[12px] font-bold text-[#0a4f3c] sm:self-center"
+                  >
+                    Use this
+                  </button>
+                )}
+              </div>
+            )}
+
+            {locationStatus && !locationError && (
+              <p className="text-[12px] font-semibold text-[#0a4f3c]">{locationStatus}</p>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowCustomLocation((prev) => !prev)}
+              className="w-full rounded-xl border border-[#0a4f3c] bg-white px-4 py-3 text-[14px] font-bold text-[#0a4f3c] transition-colors hover:bg-[#f1faf6]"
+            >
+              {showCustomLocation ? "Hide custom coordinates" : "Enter custom coordinates"}
+            </button>
+
+            {showCustomLocation && (
+              <>
+                <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2">
+                  <div>
+                    <FieldLabel>Custom Latitude</FieldLabel>
+                    <input type="number" step="any" name="latitude" value={manualCoords.latitude} onChange={handleManualCoordChange} className={inputClass} placeholder="Example: 26.1445" />
+                  </div>
+                  <div>
+                    <FieldLabel>Custom Longitude</FieldLabel>
+                    <input type="number" step="any" name="longitude" value={manualCoords.longitude} onChange={handleManualCoordChange} className={inputClass} placeholder="Example: 91.7362" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2">
+                  <button type="button" onClick={handleApplyManualLocation} className="rounded-xl border border-[#0a4f3c] bg-white px-4 py-3 text-[14px] font-bold text-[#0a4f3c] transition-colors hover:bg-[#f1faf6]">
+                    Use custom location
+                  </button>
+                  <button type="button" onClick={() => setShowLocationModal(true)} className="rounded-xl bg-[#0a4f3c] px-4 py-3 text-[14px] font-bold text-white transition-colors hover:bg-[#083f31]">
+                    Choose from map
+                  </button>
+                </div>
+              </>
+            )}
+
+            <DividerLabel>Roof & rainfall</DividerLabel>
+
+            <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2">
+              <div>
+                <FieldLabel badge={<span className="rounded-full bg-[#E1F5EE] px-2 py-0.5 text-[10px] font-bold text-[#0a8065]">✓ Verified</span>}>
+                  Annual rainfall (mm)
+                </FieldLabel>
+                <input type="number" step="any" name="annual_rainfall_mm" value={formData.annual_rainfall_mm} onChange={handleChange} required className={inputClass} />
+              </div>
+
+              <div>
+                <FieldLabel>Roof area (m²)</FieldLabel>
+                <div className="relative">
+                  <input type="number" step="any" name="roof_area_m2" value={formData.roof_area_m2} onChange={handleChange} required className={`${inputClass} pr-28`} placeholder="Example: 42" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isValidCoordinate(formData.latitude) || !isValidCoordinate(formData.longitude)) {
+                        alert("Please set a location first before calculating roof area.");
+                        return;
+                      }
+                      setShowAreaModal(true);
+                    }}
+                    className="absolute right-1.5 top-1/2 inline-flex -translate-y-1/2 items-center gap-1.5 rounded-full bg-[#0a4f3c] px-3 py-1.5 text-[12px] font-bold text-white"
+                  >
+                    <FaMap /> Map tool
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <DividerLabel>Property details</DividerLabel>
+
+            <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2">
+              <div>
+                <FieldLabel>Roof type</FieldLabel>
+                <select name="roof_type" value={formData.roof_type} onChange={handleChange} className={selectClass} style={{ backgroundImage: selectChevron, backgroundPosition: "right 12px center", backgroundSize: "14px" }}>
+                  <option value="RCC">RCC Concrete</option>
+                  <option value="mangalore_tile">Mangalore tile</option>
+                  <option value="metal_sheet">Metal sheet</option>
+                </select>
+              </div>
+
+              <div>
+                <FieldLabel>Soil type</FieldLabel>
+                <select name="soil_type" value={formData.soil_type} onChange={handleChange} className={selectClass} style={{ backgroundImage: selectChevron, backgroundPosition: "right 12px center", backgroundSize: "14px" }}>
+                  <option value="sand">Sandy</option>
+                  <option value="clay">Clay</option>
+                  <option value="loam">Loamy</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2">
+              <div>
+                <FieldLabel>Usage type</FieldLabel>
+                <select name="use_type" value={formData.use_type} onChange={handleChange} className={selectClass} style={{ backgroundImage: selectChevron, backgroundPosition: "right 12px center", backgroundSize: "14px" }}>
+                  <option value="domestic">Domestic</option>
+                  <option value="commercial">Commercial</option>
+                  <option value="agricultural">Agricultural</option>
+                </select>
+              </div>
+
+              <div>
+                <FieldLabel>Occupants</FieldLabel>
+                <div className="flex h-[39px] items-center justify-between rounded-lg border border-[#e0e0e0] bg-[#f5f5f3] px-2">
+                  <button type="button" onClick={() => updateOccupants(-1)} className="grid h-7 w-7 place-items-center rounded-full text-[#0a4f3c] transition-colors hover:bg-white" aria-label="Decrease occupants">
+                    <FaMinus />
+                  </button>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    name="num_occupants"
+                    value={formData.num_occupants}
+                    onChange={(event) => {
+                      const value = Math.max(1, Number.parseInt(event.target.value || "1", 10));
+                      setFormData((prev) => ({ ...prev, num_occupants: String(value) }));
+                    }}
+                    required
+                    className="w-16 bg-transparent text-center text-[13px] font-bold text-[#102321] outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                  <button type="button" onClick={() => updateOccupants(1)} className="grid h-7 w-7 place-items-center rounded-full text-[#0a4f3c] transition-colors hover:bg-white" aria-label="Increase occupants">
+                    <FaPlus />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <FieldLabel>Preferred system</FieldLabel>
+              <select name="system_type" value={formData.system_type} onChange={handleChange} className={selectClass} style={{ backgroundImage: selectChevron, backgroundPosition: "right 12px center", backgroundSize: "14px" }}>
+                <option value="storage">Storage tank</option>
+                <option value="recharge">Recharge pit</option>
+                <option value="hybrid">Both</option>
+              </select>
+            </div>
+
+            <button type="submit" disabled={loading} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#0a4f3c] px-4 py-4 text-[15px] font-bold text-white transition-shadow hover:shadow-[0_12px_28px_rgba(10,79,60,0.28)] disabled:opacity-70">
+              <FaCalculator />
+              {loading ? "Calculating..." : "Calculate feasibility"}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {false && (
       <div className="page-pad">
         <div className="glass-panel form-panel">
 
@@ -910,6 +1144,7 @@ function FeasibilityForm() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
